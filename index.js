@@ -17,7 +17,8 @@ jQuery(async ($) => {
         });
 
         if (!fromExt && $(EXT_PANEL).is(':visible')) {
-            $(EXT_BTN).trigger('click');
+            const btn = document.querySelector(EXT_BTN);
+            if (btn) btn.click();
         }
 
         setTimeout(() => { busy = false; }, 80);

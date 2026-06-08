@@ -10,23 +10,30 @@ jQuery(async ($) => {
 
         $(CONTENT).each(function () {
             if (this === exceptContent) return;
-            if (!this.classList.contains('openDrawer')) return;
+            if (!$(this).is(':visible')) return;   // 用可见性判断，不靠 openDrawer
 
             const drawer = this.closest('.drawer');
-            const toggle = drawer &&
-                (drawer.querySelector('.drawer-toggle') ||
-                 drawer.querySelector('.drawer-icon'));
+            const toggle = drawer && drawer.querySelector('.drawer-toggle');
             if (toggle) toggle.click();
         });
 
-        setTimeout(() => { busy = false; }, 100);
+        setTimeout(() => { busy = false; }, 120);
     }
 
     const observer = new MutationObserver((muts) => {
         for (const m of muts) {
             const el = m.target;
-            const wasOpen = (m.oldValue || '').split(' ').includes('openDrawer');
-            if (!wasOpen && el.classList.contains('openDrawer')) {
+            let justOpened = false;
+
+            if (m.attributeName === 'class') {
+                const wasOpen = (m.oldValue || '').split(' ').includes('openDrawer');
+                justOpened = !wasOpen && el.classList.contains('openDrawer');
+            } else if (m.attributeName === 'style') {
+                const wasHidden = /display:\s*none/.test(m.oldValue || '');
+                justOpened = wasHidden && window.getComputedStyle(el).display !== 'none';
+            }
+
+            if (justOpened) {
                 closeOthers(el);
                 break;
             }
@@ -42,7 +49,7 @@ jQuery(async ($) => {
         contents.each(function () {
             observer.observe(this, {
                 attributes: true,
-                attributeFilter: ['class'],
+                attributeFilter: ['class', 'style'],
                 attributeOldValue: true,
             });
         });

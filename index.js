@@ -1,70 +1,52 @@
 jQuery(async ($) => {
     'use strict';
 
-    const ICON = '.drawer-icon';
-    const EXT_PANEL = '.extensions_block';
-    const EXT_BTN = '.drawer-icon.fa-cubes';
-
+    const CONTENT = '.drawer-content';
     let busy = false;
 
-    // 关掉除「触发源」外的所有面板
-    function closeOthers({ exceptIcon = null, fromExt = false }) {
+    function closeOthers(exceptContent) {
         if (busy) return;
         busy = true;
 
-        $(ICON).filter('.open').each(function () {
-            if (this !== exceptIcon) $(this).trigger('click');
+        $(CONTENT).each(function () {
+            if (this === exceptContent) return;
+            if (!this.classList.contains('openDrawer')) return;
+
+            const drawer = this.closest('.drawer');
+            const toggle = drawer &&
+                (drawer.querySelector('.drawer-toggle') ||
+                 drawer.querySelector('.drawer-icon'));
+            if (toggle) toggle.click();
         });
 
-        if (!fromExt && $(EXT_PANEL).is(':visible')) {
-            const btn = document.querySelector(EXT_BTN);
-            if (btn) btn.click();
-        }
-
-        setTimeout(() => { busy = false; }, 80);
+        setTimeout(() => { busy = false; }, 100);
     }
 
-    // 普通 drawer：盯 class 变化
-    const iconObserver = new MutationObserver((muts) => {
+    const observer = new MutationObserver((muts) => {
         for (const m of muts) {
             const el = m.target;
-            const wasOpen = m.oldValue?.split(' ').includes('open');
-            if (!wasOpen && el.classList.contains('open')) {
-                closeOthers({ exceptIcon: el });
-                break;
-            }
-        }
-    });
-
-    // 扩展面板：盯 style 变化
-    const extObserver = new MutationObserver((muts) => {
-        for (const m of muts) {
-            const el = m.target;
-            const wasHidden = /display:\s*none/.test(m.oldValue || '');
-            const isVisible = window.getComputedStyle(el).display !== 'none';
-            if (wasHidden && isVisible) {
-                closeOthers({ fromExt: true });
+            const wasOpen = (m.oldValue || '').split(' ').includes('openDrawer');
+            if (!wasOpen && el.classList.contains('openDrawer')) {
+                closeOthers(el);
                 break;
             }
         }
     });
 
     function attach() {
-        const icons = $(ICON);
-        const extPanel = document.querySelector(EXT_PANEL);
-        if (!icons.length || !extPanel) {
+        const contents = $(CONTENT);
+        if (!contents.length) {
             setTimeout(attach, 500);
             return;
         }
-        icons.each(function () {
-            iconObserver.observe(this, {
-                attributes: true, attributeFilter: ['class'], attributeOldValue: true,
+        contents.each(function () {
+            observer.observe(this, {
+                attributes: true,
+                attributeFilter: ['class'],
+                attributeOldValue: true,
             });
         });
-        extObserver.observe(extPanel, {
-            attributes: true, attributeFilter: ['style'], attributeOldValue: true,
-        });
-        console.log(`[auto-close-drawers] attached ${icons.length} icons + ext panel`);
+        console.log(`[auto-close-drawers] attached ${contents.length} drawer-contents`);
     }
 
     attach();
